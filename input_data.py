@@ -6,9 +6,6 @@ import json
 
 
 def get_label_from_filename(filename):
-    """
-    Extract metadata (e.g., level, labels) from a given filename.
-    """
     # Example: Parse filename like
     # 'IC-CX-00001-01.patches/normal/IC-CX-00001-01-00000001-x8960-y15872-l1-s256-normal_inflammationLnormal_inflammationLtrainLnormal.png'
     full_label = filename.split("-")[-1].split(".png")[0]
@@ -21,16 +18,12 @@ def get_label_from_filename(filename):
 
 
 def process_zarr_file(file_path, label_mapping):
-    """
-    Process a single Zarr file to extract features and labels.
-    """
     zarr_file = zarr.open(file_path, mode='r')
     
     # Extract features and filenames
     features = zarr_file['features'][:]
     filenames = zarr_file['filenames'][:]
 
-    # Collect data
     data = []
     for feature, filename in zip(features, filenames):
         label_data = get_label_from_filename(filename)
@@ -56,14 +49,11 @@ def get_label_numeric(label):
         "malignant": 3
     }
     
-    return label_mapping.get(label, -1)  # Default to -1 if the label is not found
+    return label_mapping.get(label, -1)  #  -1 if label is not found
 
 
 # Process embeddings .zarr files and export data to numpy arrays
 def main(embeddings_directory, json_label_path, output_file):
-    """
-    Main function to process all Zarr files and export data.
-    """
     # Load label mapping
     with open(json_label_path, "r") as f:
         label_mapping = json.load(f)

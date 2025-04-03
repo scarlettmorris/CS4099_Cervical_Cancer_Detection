@@ -16,5 +16,4 @@ class Logger:
         self.logger = logging.getLogger(model)
 
     def get_logger(self):
-        # returns the logger instance
         return self.logger

@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 
 class TransformerModel(nn.Module):
     
-    # hyperparameters from - https://doi.org/10.1007/978-3-031-66955-2_23
+    # Hyperparameters and network architecture taken from https://doi.org/10.1007/978-3-031-66955-2_23
     def __init__(self, input_dim=1024, model_dim=512, feedforward_dim=2048, num_classes=4, num_heads=4, num_layers=6, dropout = 0.15):
         super(TransformerModel, self).__init__()
         self.embedding = nn.Linear(input_dim, model_dim)
@@ -36,7 +36,7 @@ class TransformerModel(nn.Module):
         
         train_loader = prepare_data(train_features, train_labels_numeric)
         validate_loader = prepare_data(validate_features, validate_labels_numeric)
-        logger.info("Dataset loaded successfully!")
+        logger.info("Dataset loaded.")
         
         model = TransformerModel()
         logger.info(model)
@@ -56,7 +56,7 @@ class TransformerModel(nn.Module):
         train_accuracies = []
         validation_accuracies = []
         
-        # changed to 100 epochs after investigations
+        # changed from 200 epochs to 100 after investigations
         for epoch in range(100):
             model.train()
             running_loss = 0.0  
@@ -122,28 +122,23 @@ class TransformerModel(nn.Module):
         time_stamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) 
         plt.savefig(f"training_validation_transformer_{time_stamp}.png")
 
-        logger.info("Training completed successfully!")
+        logger.info("Training completed.")
         torch.save(model.state_dict(), 'transformer.pth')
         return model
     
     def evaluate_model(self, data_set_type, model, logger):
         
         if data_set_type == 'train':
-            # evaluate on training set
-            # run model on training set
             print("Evaluating on training set...")
             set = "training"
             train_filenames, train_features, train_labels, train_labels_numeric = get_arrays("new_train_data.npz")
             loader = prepare_data(train_features, train_labels_numeric)
         elif data_set_type == 'validate':
-            # evaluate on validation set
-            # run model on validation set
             print("Evaluating on validation set...")
             set = "validation"
             validate_filenames, validate_features, validate_labels, validate_labels_numeric = get_arrays("new_validate_data.npz")
             loader = prepare_data(validate_features, validate_labels_numeric)
         elif data_set_type == 'test':
-            # evaluate on test set
             print("Evaluating on testing set...")
             set = "test"
             test_filenames, test_features, test_labels, test_labels_numeric = get_arrays("new_test_data.npz")
@@ -176,20 +171,17 @@ class TransformerModel(nn.Module):
         logger.info(f"Loading model from: {model_path}")
         model = TransformerModel().to(device)
         model.load_state_dict(torch.load(model_path, map_location=device))
-        # eval() turns dropout off, and batch normalisation uses the stored running mean and variance rather
         model.eval()
 
         return model
         
 
 
-def prepare_data(features, labels_numeric, batch_size=64, shuffle=True):
-    # Dataloader feeds the data in batches to the neural net for training and processing. 
+def prepare_data(features, labels_numeric, batch_size=64, shuffle=True): 
     features_tensor = torch.tensor(features, dtype=torch.float32)
     labels_tensor = torch.tensor(labels_numeric, dtype=torch.long)
 
     dataset = TensorDataset(features_tensor, labels_tensor)
-    # the DataLoader handles batching and shuffling, making it easy to feed the data into the model
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
         
     return dataloader
@@ -203,6 +195,7 @@ def log_metrics(logger, dataset, y, pred):
 
     plot_confusion_matrix(y, pred, f"Confusion Matrix: Transformer on {dataset} Data", dataset)
 
+    # Calculate sensitivity and specificity for malignancy
     cm = confusion_matrix(y, pred)
     tn = cm[0, 0] + cm[1, 1] + cm[2, 2]  
     tp = cm[3, 3]

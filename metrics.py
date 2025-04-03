@@ -8,7 +8,7 @@ def get_training_time(start_time, end_time):
     time_to_train_hours = time_to_train_mins / 60
     return time_to_train_hours
 
-# function adapted from - tutorial at https://scikit-learn.org/dev/modules/generated/sklearn.metrics.ConfusionMatrixDisplay.html
+# Function adapted from - tutorial at https://scikit-learn.org/dev/modules/generated/sklearn.metrics.ConfusionMatrixDisplay.html
 def plot_confusion_matrix(y, pred, title, dataset):
     cm = confusion_matrix(y, pred)
     # Convert count to percentage to display as % of TP/FP per class

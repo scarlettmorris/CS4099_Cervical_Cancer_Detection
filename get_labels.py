@@ -17,7 +17,6 @@ def get_labels_for_filename():
     data = zarr.open(file, mode='r')
     filenames = data['filenames'][:]
 
-    # Extract label from filename
     labels = []
     for fname in filenames:
         # Extract label from filename

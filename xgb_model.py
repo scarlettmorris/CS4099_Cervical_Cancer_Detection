@@ -12,11 +12,11 @@ from metrics import get_training_time, plot_confusion_matrix
 class XGBModel:
     
     def train_model(self, train_set, validate_set, logger):
-        # get the features & labels from the data
         X_train, y_train = train_set["features"], train_set["labels_numeric"]
         X_validate, y_validate = validate_set["features"], validate_set["labels_numeric"]
         
         # Convert data into DMatrix format (efficient data structure for XGBoost)
+        # Train only a subset of the data, due to memory limitations
         d_train = xgb.DMatrix(X_train[:300000], label=y_train[:300000])
         d_validate = xgb.DMatrix(X_validate, label=y_validate)
         
@@ -47,13 +47,14 @@ class XGBModel:
         num_rounds = 100
             
         eval = [(d_train, "train"), (d_validate, "validate")]
-        # train model
         logger.info("Training XGBoost Classifier...")
         start_time = time.time()
         start_time_stamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time))
         logger.info(f"Training start time: {start_time_stamp}")
         start_time = time.time()
+        
         xgb_model = xgb.train(params, d_train, num_rounds, eval, early_stopping_rounds=10)
+        
         end_time = time.time()
         end_time_stamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time))
         logger.info(f"Training end time: {end_time_stamp}")
@@ -68,27 +69,24 @@ class XGBModel:
         
     
     def tune_model(self, train_set, validate_set, logger):
-        # get the features & labels from the data
         X_train, y_train = train_set["features"], train_set["labels_numeric"] 
         X_validate, y_validate = validate_set["features"], validate_set["labels_numeric"]
-        
-        # Create the random grid
-        # random grid = {}
-        
+                
         # Convert data into DMatrix format (efficient data structure for XGBoost)
+        # Train only a subset of the data, due to memory limitations
         d_train = xgb.DMatrix(X_train[:300000], label=y_train[:300000])
         d_validate = xgb.DMatrix(X_validate, label=y_validate)
         
         random_grid = {
-            "max_depth": [3, 5, 10, 15],          # Tree depth
-            "learning_rate": [0.01, 0.05, 0.1, 0.3],  # Step size shrinkage
-            "subsample": [0.6, 0.8, 1.0],         # Fraction of samples used for training
-            "colsample_bytree": [0.6, 0.8, 1.0],  # Fraction of features used per tree
-            "gamma": [0, 0.1, 0.2, 0.3],          # Minimum loss reduction required for split
+            "max_depth": [3, 5, 10, 15],          
+            "learning_rate": [0.01, 0.05, 0.1, 0.3],  
+            "subsample": [0.6, 0.8, 1.0],         
+            "colsample_bytree": [0.6, 0.8, 1.0],  
+            "gamma": [0, 0.1, 0.2, 0.3],          
         }
         
         num_rounds = 100
-        num_searches = 10
+        num_searches = 12
         best_score = float("inf")
         best_params = None
         best_model = None
@@ -99,7 +97,6 @@ class XGBModel:
         logger.info(f"Tuning start time: {start_time_stamp}")
         
         for i in range(num_searches):
-        # Randomly sample hyperparameters
             params = {
                 "objective": "multi:softmax",
                 "num_class": 4,
@@ -119,11 +116,11 @@ class XGBModel:
             eval = [(d_train, "train"), (d_validate, "validate")]
             xgb_model = xgb.train(params, d_train, num_rounds, eval, early_stopping_rounds=10, verbose_eval=False)
 
-            # Validation error (merror)
+            # Validation score
             validation_score = xgb_model.best_score
-            logger.info(f"Validation merror: {validation_score}")
+            logger.info(f"Validation error: {validation_score}")
 
-            # Update best model if performance improved
+            # Update best model if performance improved from prev best model
             if validation_score < best_score:
                 best_score = validation_score
                 best_params = params
@@ -147,17 +144,12 @@ class XGBModel:
         d_matrix = xgb.DMatrix(X, label=y)
         
         if data_set_type == 'train':
-            # evaluate on training set
-            # run model on training set
             logger.info("Evaluating on training set...")
             set = "training"
         elif data_set_type == 'validate':
-            # evaluate on validation set
-            # run model on validation set
             logger.info("Evaluating on validation set...")
             set = "validation"
         elif data_set_type == 'test':
-            # evaluate on test set
             logger.info("Evaluating on test set...")
             set = "test"
             
@@ -171,11 +163,11 @@ class XGBModel:
         plot_confusion_matrix(y, pred, title, set)
         cm = confusion_matrix(y, pred)
         
-        # Calculate sensitivity (recall) and specificity for malignancy (last class)
-        tn = cm[0, 0] + cm[1, 1] + cm[2, 2]  # Sum of true negatives for non-malignant classes
-        tp = cm[3, 3]  # True positives for malignant class
-        fn = sum(cm[3, :]) - tp  # False negatives for malignant class
-        fp = sum(cm[:, 3]) - tp  # False positives for malignant class
+        # Calculate sensitivity and specificity for malignancy 
+        tn = cm[0, 0] + cm[1, 1] + cm[2, 2]
+        tp = cm[3, 3] 
+        fn = sum(cm[3, :]) - tp 
+        fp = sum(cm[:, 3]) - tp 
         
         sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0
         specificity = tn / (tn + fp) if (tn + fp) > 0 else 0

@@ -27,7 +27,7 @@ class MLP(nn.Module):
         self.relu1 = nn.ReLU()  # ReLU activation
         self.dropout1 = nn.Dropout(0.6)  # Dropout at 50%, then increased to 60%
         
-        self.fc2 = nn.Linear(512, 20)  # Second hidden layer with 40 neurons (decreased to 20 in invesitgation)
+        self.fc2 = nn.Linear(512, 20)  # Second hidden layer with 40 neurons (decreased to 20 in investigation)
         self.relu2 = nn.ReLU()  # ReLU activation
         self.dropout2 = nn.Dropout(0.5)  # Dropout at 30%, then increased to 50%
         
@@ -47,7 +47,7 @@ class MLP(nn.Module):
         
         train_loader = prepare_data(train_features, train_labels_numeric)
         validate_loader = prepare_data(validate_features, validate_labels_numeric, shuffle=False)
-        logger.info("Dataset loaded successfully!")
+        logger.info("Dataset loaded.")
     
         model = MLP()
         logger.info(model)
@@ -56,33 +56,21 @@ class MLP(nn.Module):
         time_stamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time))
         logger.info(f"Training start time: {time_stamp}")
         
-        # Train the MLP:
-        # Define loss function - here use this one for multi class classification
-        # Added in weights to try and deal with class imbalance
-        # Calculate weights for each class
         device = 'cuda'
-        #count_classes = Counter(train_labels_numeric)
-        #total_instances = sum(count_classes.values())
-        # Create a dictionary of class weights based on the inverse frequency of each class
-        #weights = {cls: total_instances / count for cls, count in count_classes.items()}
-        #weights_tensor = torch.tensor([weights[i] for i in range(len(weights))], dtype=torch.float).to(device)
         criterion = nn.CrossEntropyLoss()
-
-
-        # Define optimiser (Adam with a learning rate of 0.001)
         optimiser = optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
-        logger.info("Loss function and optimizer defined successfully!")
+        logger.info("Loss function and optimiser defined.")
 
         model.to(device)
     
-        # Example: Storing and plotting loss values
         loss_values = []
         validation_loss_values = []
         train_accuracies = []
         val_accuracies = []
     
-        for epoch in range(100):  # Training for 100 epochs
-            # turn model back to training mode after each validation at the end of each epoch
+        # Training for 100 epochs
+        for epoch in range(100):  
+            # Turn model back to training mode after each validation at the end of each epoch
             model.train()
             running_loss = 0.0  
             predictions = []
@@ -92,33 +80,28 @@ class MLP(nn.Module):
             for inputs, labels in train_loader:
                 inputs, labels = inputs.to(device), labels.to(device)
             
-                optimiser.zero_grad()           # Clear previous gradients
-                outputs = model(inputs)         # Forward pass
-                loss = criterion(outputs, labels)  # Compute loss
-                loss.backward()                 # Back propagation
-                optimiser.step()                # Update weights
+                optimiser.zero_grad()           
+                outputs = model(inputs)         
+                loss = criterion(outputs, labels) 
+                loss.backward()                 
+                optimiser.step()                
 
-                running_loss += loss.item()     # Accumulate loss
+                running_loss += loss.item()    
                 predictions.extend(torch.argmax(outputs, dim = 1).cpu().numpy())
                 real_labels.extend(labels.cpu().numpy())
 
-            # Log loss for the current epoch & accuracy
             avg_loss = running_loss / len(train_loader)
             loss_values.append(avg_loss)
             accuracy = accuracy_score(real_labels, predictions)
             train_accuracies.append(accuracy)
         
-            # The model is trained on the training set, and, simultaneously, the model evaluation is performed on the validation set after every epoch
-            # ^ - https://www.v7labs.com/blog/train-validation-test-set
-        
-            # validate model
-            # In addition, the common practice for evaluating/validation is using torch.no_grad() in pair with model.eval() to turn off gradients computation
-            # ^ - https://stackoverflow.com/questions/60018578/what-does-model-eval-do-in-pytorch
             model.eval()
             validation_loss = 0.0
             validation_predictions = []
             validation_labels = []
         
+            # Common practice for evaluating/validation is using torch.no_grad() in pair with model.eval() to 
+            # turn off gradients computation - https://stackoverflow.com/questions/60018578/what-does-model-eval-do-in-pytorch
             with torch.no_grad():
                 for inputs, labels in validate_loader:
                     inputs, labels = inputs.to(device), labels.to(device)
@@ -139,7 +122,6 @@ class MLP(nn.Module):
         log_metrics(logger, "Training", real_labels, predictions)
         log_metrics(logger, "Validation", validation_labels, validation_predictions)
         
-        # Plot the loss curve
         # Plot the training and validation accuracy on the same plot
         # Code adapted from https://github.com/omaratef3221/pytorch_tutorials/blob/main/Ex_1_Tabular_Classification.ipynb
         plt.figure()
@@ -151,7 +133,7 @@ class MLP(nn.Module):
         plt.legend()
         plt.savefig('training_validation_over_epoch.png')
 
-        logger.info("Training completed successfully!")
+        logger.info("Training completed.")
         
         end_time = time.time()
     
@@ -160,9 +142,9 @@ class MLP(nn.Module):
         time_to_train_hours = time_to_train_mins / 60
         logger.info(f"Time to train: {time_to_train_hours:.2f} hours")
     
-        # save model
+        # Save model
         torch.save(model.state_dict(), 'mlp.pth')
-        logger.info("Model saved successfully!")
+        logger.info("Model saved.")
 
         return model
     
@@ -176,7 +158,6 @@ class MLP(nn.Module):
         logger.info(f"Loading model from: {model_path}")
         model = MLP().to(device)
         model.load_state_dict(torch.load(model_path, map_location=device))
-        # eval() turns dropout off, and batch normalisation uses the stored running mean and variance rather
         model.eval()
 
         return model
@@ -212,7 +193,7 @@ def prepare_data(features, labels_numeric, batch_size=64, shuffle=True):
         labels_tensor = torch.tensor(labels_numeric, dtype=torch.long)
 
         dataset = TensorDataset(features_tensor, labels_tensor)
-        # the DataLoader handles batching and shuffling, making it easy to feed the data into the model
+        # The DataLoader makes it easy to feed the data into the model
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
         
         return dataloader
@@ -227,6 +208,7 @@ def log_metrics(logger, dataset, y, pred):
 
     plot_confusion_matrix(y, pred, f"Confusion Matrix: MLP on {dataset} Data", dataset)
 
+    # Calculate sensitivity and specificity for malignancy
     cm = confusion_matrix(y, pred)
     tn = cm[0, 0] + cm[1, 1] + cm[2, 2]  
     tp = cm[3, 3]

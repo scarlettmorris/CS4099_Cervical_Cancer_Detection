@@ -4,10 +4,8 @@ import matplotlib.pyplot as plt
 from collections import Counter
 
 def load_npz_data(filepath):
-    # Load the .npz file
     data = np.load(filepath)
     # Inspect the keys (names of arrays saved in the file)
-    #print(data.files)
     return data
 
 def get_arrays(filepath):
@@ -27,7 +25,6 @@ def inspect_arrays(filenames, features, labels, labels_numeric):
     print("Labels shape:", labels.shape)
     print("Labels numeric shape:", labels_numeric.shape)
 
-    # explore the data (EDA - exploratory data analysis)
     # Count occurrences of each label
     label_counts = Counter(labels)
 
@@ -35,7 +32,6 @@ def inspect_arrays(filenames, features, labels, labels_numeric):
     label_names = list(label_counts.keys())
     counts = list(label_counts.values())
 
-    # Plot the data
     plt.figure(figsize=(10, 6))
     plt.bar(label_names, counts, color='skyblue')
     plt.xlabel("Labels", fontsize=14)
@@ -46,29 +42,27 @@ def inspect_arrays(filenames, features, labels, labels_numeric):
     plt.show()
 
 def test_arrays_contents(filenames, features, labels, labels_numeric):
-    for i in range(5):  # Inspect the first 5 samples
+    # Inspect the first 5 samples
+    for i in range(5):  
         print(f"Filenames {i}: {filenames[i]}")
         print(f"Feature {i}: {features[i]}")
         print(f"Text Label {i}: {labels[i]}")
         print(f"Numeric Label {i}: {labels_numeric[i]}")
         print()
 
-# split the arrays
+# Split the arrays - old strategy of doing 60:20:20 split
 def get_index_for_splits(filenames):
-    # get index of array where we split the .zarr filename for T/V/T sets
-    # split train <= 1884
-    # split validate > 1884 && <= 2512
-    # split test > 2512 && 3140
+    # Get index of array where to split the .zarr filename for T/V/T sets
+    # Split train <= 1884
+    # Split validate > 1884 && <= 2512
+    # Split test > 2512 && 3140
     patches = []
-
-    # get the index of the first occurrence of patch number 1885 and store as start_of_validation
-    # get the index of the first occurrence of patch number 2513 and store as start_of_train
     start_of_validation_index = 0
     start_of_test_index = 0
 
     for i in range(len(filenames)):
         # Filenames 0: IC-CX-00001-01.patches/normal/IC-CX-00001-01-00000000-x8704-y15872-l1-s256-normal_inflammationLnormal_inflammationLtrainLnormal.png
-        # split the filename to subtract patch number
+        # Split the filename to subtract patch number
         patch_number = filenames[i].split("-")[2].split("-")[0]
         if patch_number == '01885' and start_of_validation_index == 0:
             start_of_validation_index = i
@@ -82,13 +76,12 @@ def get_index_for_splits(filenames):
     print('Start of test index: ', start_of_test_index)
 
 
-# create separate train/validate/test arrays
+# Create separate train/validate/test arrays
 def split_arrays(filenames, features, labels, labels_numeric):
     
-    # training & validation set index splits
+    # Training & validation set index splits - old strategy for splitting
     train_split = 2049574
     validate_split = 2818834
-    # split data into train, validate, and test sets
 
     train_data = {
         "filenames": filenames[:train_split],
@@ -109,7 +102,7 @@ def split_arrays(filenames, features, labels, labels_numeric):
         "labels_numeric": labels_numeric[validate_split:],
     }
 
-    # save arrays as .npz files
+    # Save arrays as .npz files
     np.savez_compressed("train_data.npz", **train_data)
     np.savez_compressed("validate_data.npz", **validate_data)
     np.savez_compressed("test_data.npz", **test_data)
@@ -121,9 +114,9 @@ def get_tvt_arrays(filenames):
     
     for filename in filenames:
         # Filenames of format 0: IC-CX-00001-01.patches/normal/IC-CX-00001-01-00000000-x8704-y15872-l1-s256-normal_inflammationLnormal_inflammationLtrainLnormal.png
-        # split the filename to subtract patch number
+        # Split the filename to subtract patch number
         full_label = filename.split("-")[-1].split(".png")[0]
-        # gives us normal_inflammationLnormal_inflammationLtrainLnormal
+        # Gives: normal_inflammationLnormal_inflammationLtrainLnormal for example
         # Split by L delimiter and take 3rd occurrence
         tvt_split = full_label.split("L")[2]
         tvt.append(tvt_split)
@@ -131,12 +124,11 @@ def get_tvt_arrays(filenames):
     return tvt
     
     
-# create separate train/validate/test arrays
+# Create separate train/validate/test arrays as per updated splitting strategy
 def new_split_arrays(filenames, features, labels, labels_numeric):
     
-    # for each element, get whether it is train/validate/test from its filename
+    # For each element, get whether it is train/validate/test from its filename
     tvt = get_tvt_arrays(filenames)
-    # print unique occurrences of tvt
     tvt_count = Counter(tvt)
     print("Number of occurrences of each value in tvt:", tvt_count)
     
@@ -169,17 +161,15 @@ def new_split_arrays(filenames, features, labels, labels_numeric):
             test_data["features"].append(features[i])
             test_data["labels"].append(labels[i])
             test_data["labels_numeric"].append(labels_numeric[i])
-            
-    print("Got here")
         
-    # save arrays as .npz files
+    # Save arrays as .npz files
     np.savez_compressed("new_train_data.npz", **train_data)
     np.savez_compressed("new_validate_data.npz", **validate_data)
     np.savez_compressed("new_test_data.npz", **test_data)
 
     print("Data saved to new_train_data.npz, new_validate_data.npz, and new_test_data.npz")
     
-    #Check the size of each array to ensure it matches the distribution expected
+    # Check the size of each array to ensure it matches the distribution expected
     print(f"Train set size: {len(train_data['filenames'])}")
     print(f"Validation set size: {len(validate_data['filenames'])}")
     print(f"Test set size: {len(test_data['filenames'])}")

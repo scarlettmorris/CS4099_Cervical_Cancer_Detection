@@ -10,17 +10,16 @@ from metrics import get_training_time, plot_confusion_matrix
 class SVMModel:
     
     def train_model(self, train_set, logger):
-        # get the features & labels from the data
         X_train, y_train = train_set["features"], train_set["labels_numeric"]
 
         svm = LinearSVC(tol=0.01, max_iter=1000, C=0.1)
-        #svm = LinearSVC()
 
-        # train model
         logger.info("Training SVM Classifier...")
         start_time = time.time()
         start_time_stamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time))
         logger.info(f"Training start time: {start_time_stamp}")
+        
+        # Train only a subset of the data, due to memory limitations
         svm.fit(X_train[:300000], y_train[:300000])
         end_time = time.time()
         end_time_stamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time))
@@ -36,16 +35,17 @@ class SVMModel:
         
     
     def tune_model(self, train_set, logger):
-        # get the features & labels from the data
         X_train, y_train = train_set["features"], train_set["labels_numeric"]
         
-        # Create the random grid
+        # Grid of parameters for Random Search
         random_grid = {
             'C': [0.1, 1, 10, 100, 1000],  
             'max_iter': [1000, 3000, 5000],
             'tol': [1e-4, 1e-3, 1e-2]  
             }
-        # dual = False - https://github.com/scikit-learn/scikit-learn/issues/17339 when number of samples > number of features                
+        
+        # setting dual to False when number of samples > number of features 
+        # from https://github.com/scikit-learn/scikit-learn/issues/17339             
         svm = LinearSVC(dual=False)
         logger.info("Tuning SVM Classifier...")
         
@@ -55,6 +55,7 @@ class SVMModel:
         start_time_stamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time))
         logger.info(f"Training start time: {start_time_stamp}")
         
+        # Tune on only a subset of the data, due to memory limitations
         svm_tuned.fit(X_train[:100000], y_train[:100000])
         end_time = time.time()
         end_time_stamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time))
@@ -65,7 +66,7 @@ class SVMModel:
         
         timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
         
-        # See hyperparameters chosen
+        # Output hyperparameters chosen
         logger.info("Hyperparameter results from the random grid search:")
         logger.info(svm_tuned.best_params_)
         logger.info(svm_tuned.best_score_)
@@ -76,17 +77,12 @@ class SVMModel:
         X, y = data_set["features"], data_set["labels_numeric"]
         
         if data_set_type == 'train':
-            # evaluate on training set
-            # run model on training set
             print("Evaluating on training set...")
             set = "training"
         elif data_set_type == 'validate':
-            # evaluate on validation set
-            # run model on validation set
             print("Evaluating on validation set...")
             set = "validation"
         elif data_set_type == 'test':
-            # evaluate on test set
             print("Evaluating on test set...")
             set = "test"
             
@@ -100,11 +96,11 @@ class SVMModel:
         plot_confusion_matrix(y, pred, title, set)
         cm = confusion_matrix(y, pred)
         
-        # Calculate sensitivity (recall) and specificity for malignancy (last class)
-        tn = cm[0, 0] + cm[1, 1] + cm[2, 2]  # Sum of true negatives for non-malignant classes
-        tp = cm[3, 3]  # True positives for malignant class
-        fn = sum(cm[3, :]) - tp  # False negatives for malignant class
-        fp = sum(cm[:, 3]) - tp  # False positives for malignant class
+        # Calculate sensitivity and specificity for malignancy
+        tn = cm[0, 0] + cm[1, 1] + cm[2, 2]  
+        tp = cm[3, 3] 
+        fn = sum(cm[3, :]) - tp  
+        fp = sum(cm[:, 3]) - tp  
         
         sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0
         specificity = tn / (tn + fp) if (tn + fp) > 0 else 0
