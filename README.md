@@ -11,7 +11,7 @@ Run new_load_data.ipynb to load the numpy arrays (an array for filenames, featur
 ### Working directly with new_train_data.npz, new_validate_data.npz, and new_test_data.npz
 Datasets can be found at: 10.5281/zenodo.15121399
 
-Ensure files are in the same directly as all .py files. 
+Ensure files are in the same directory as all .py files. 
 
 ### Working with the Docker container
 
